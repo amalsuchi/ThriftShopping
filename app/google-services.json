@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1060008067699",
+    "project_id": "sportbooking-ab872",
+    "storage_bucket": "sportbooking-ab872.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1060008067699:android:ec52a60e282c5539fb2006",
+        "android_client_info": {
+          "package_name": "com.example.sportsbooking"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzwBpm0slOp-e_9rqmQxFd7qeWzyGX4bw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
