@@ -114,19 +114,7 @@ class MainActivity : ComponentActivity() {
                             Permission(navController = navController)
                         }
                         composable("MainPage"){
-                            mainPageScreen(navController = navController, onSignOut = {
-                                lifecycleScope.launch {
-                                    googleAuthUiClient.signOut()
-                                    Toast.makeText(
-                                        applicationContext,
-                                        "Signed out",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-
-                                    navController.navigate("Auth")
-                                }
-                            }
-                            )
+                            mainPageScreen(navController = navController)
                         }
                     }
                 }

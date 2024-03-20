@@ -56,7 +56,7 @@ import com.example.sportsbooking.PresentationLayer.Screens.UserAdd.YourAdds
 @OptIn(ExperimentalMaterial3Api::class)
 
 @Composable
-fun mainPageScreen(navController: NavController,onSignOut: () -> Unit){
+fun mainPageScreen(navController: NavController){
 
     val bottomBar = listOf(
         BottomNav(

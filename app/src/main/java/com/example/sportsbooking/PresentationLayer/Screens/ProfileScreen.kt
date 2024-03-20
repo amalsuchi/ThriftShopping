@@ -17,11 +17,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.modifier.modifierLocalConsumer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,19 +37,31 @@ import com.google.android.gms.auth.api.identity.Identity
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
+import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.P)
 @Composable
 fun profileScreen(navController: NavController) {
     val vm: VM = hiltViewModel()
 
+    val coroutineScope = rememberCoroutineScope()
     val uiResponse = vm.uiResponse.value
+
+    val context = LocalContext.current
+    val googleAuthUiClient by lazy {
+        GoogleAuthUiClient(
+            context =  context,
+            oneTapClient = Identity.getSignInClient(context)
+        )
+    }
 
     LaunchedEffect(Unit) {
         vm.getUserData()
 
     }
-    Column(modifier = Modifier.fillMaxWidth().padding(10.dp)){
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(10.dp)){
         when {
             uiResponse.isLoading -> CircularProgressIndicator()
             uiResponse.isSuccess && uiResponse.userInfoData != null -> {
@@ -70,34 +84,39 @@ fun profileScreen(navController: NavController) {
 
             }
         }
-    }
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier
-            .padding(10.dp)
-            .background(Color.LightGray)
-            .clip(
-                RoundedCornerShape(20.dp)
-            )
-            .fillMaxWidth()){
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier
+                .padding(10.dp)
+                .background(Color.LightGray)
+                .clip(
+                    RoundedCornerShape(20.dp)
+                )
+                .fillMaxWidth()){
 
 
 
-            Column(modifier = Modifier.padding(10.dp)){
-                Button(onClick = { navController.navigate("ProfileEditScreen") }) {
-                    Text(text = "Edit")
+                Column(modifier = Modifier.padding(10.dp)){
+                    Button(onClick = { navController.navigate("ProfileEditScreen") }) {
+                        Text(text = "Edit")
+                    }
                 }
-            }
 
-            Column(modifier = Modifier.padding(10.dp)){
-                Button(onClick = {
+                Column(modifier = Modifier.padding(10.dp)){
+                    Button(onClick = {
+                        coroutineScope.launch {
+                            googleAuthUiClient.signOut()
+                            navController.navigate("Auth")
+                        }
 
-                }){
-                    Text(text = "LogOut")
+                    }){
+                        Text(text = "LogOut")
+                    }
                 }
             }
         }
     }
+
+
 }
 
 @Composable
