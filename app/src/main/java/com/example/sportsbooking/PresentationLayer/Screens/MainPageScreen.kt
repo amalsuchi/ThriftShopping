@@ -38,6 +38,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.sportsbooking.PresentationLayer.DataClass.BottomNav
 import com.example.sportsbooking.PresentationLayer.Screens.HomeScreen.HomeScreen
+import com.example.sportsbooking.PresentationLayer.Screens.HomeScreen.newHomeScreen
 import com.example.sportsbooking.PresentationLayer.Screens.SellClothesDetail.sellMensFashion
 import com.example.sportsbooking.PresentationLayer.Screens.SellScreen.sellart
 import com.example.sportsbooking.PresentationLayer.Screens.SellScreen.sellbooks
@@ -55,7 +56,7 @@ import com.example.sportsbooking.PresentationLayer.Screens.UserAdd.YourAdds
 @OptIn(ExperimentalMaterial3Api::class)
 
 @Composable
-fun mainPageScreen(navController: NavController){
+fun mainPageScreen(navController: NavController,onSignOut: () -> Unit){
 
     val bottomBar = listOf(
         BottomNav(
@@ -154,7 +155,7 @@ fun mainPageScreen(navController: NavController){
                         profileScreen(navController = navController)
                     }
                     composable("Home"){
-                        HomeScreen(navController = navController)
+                        newHomeScreen(navController = navController)
                     }
                     composable("Add"){
                         YourAdds(navController = navController)

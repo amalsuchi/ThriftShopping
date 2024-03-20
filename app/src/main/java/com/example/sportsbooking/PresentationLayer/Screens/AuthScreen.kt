@@ -47,6 +47,7 @@ fun authScreen(navController: NavController){
     val launcher = rememberFirebaseAuthLauncher(
         onAuthComplete = { result ->
             user = result.user
+
             navController.navigate("PermissionPage")
 
         },

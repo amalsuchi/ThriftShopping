@@ -12,6 +12,7 @@ import com.example.sportsbooking.PresentationLayer.Screens.authScreen
 import com.example.sportsbooking.PresentationLayer.Screens.mainPageScreen
 
 
+/*
 @RequiresApi(Build.VERSION_CODES.P)
 @Composable
 fun appnavigation(){
@@ -28,3 +29,5 @@ fun appnavigation(){
         }
     }
 }
+
+ */

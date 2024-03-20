@@ -28,7 +28,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.sportsbooking.PresentationLayer.DataClass.UiResponse
 import com.example.sportsbooking.PresentationLayer.ViewModel.VM
+import com.example.sportsbooking.PresentationLayer.signIn.GoogleAuthUiClient
+import com.google.android.gms.auth.api.identity.Identity
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
@@ -38,69 +41,47 @@ import com.google.firebase.firestore.firestore
 fun profileScreen(navController: NavController) {
     val vm: VM = hiltViewModel()
 
-    val uiState = vm.uiState.value
-    val errorState = vm.errorState.value
-    var user by remember { mutableStateOf(Firebase.auth.currentUser) }
+    val uiResponse = vm.uiResponse.value
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(10.dp).background(Color.LightGray).clip(
-            RoundedCornerShape(20.dp)
-        ).fillMaxWidth()){
+    LaunchedEffect(Unit) {
+        vm.getUserData()
 
-            LaunchedEffect(Unit) {
-                vm.getUserData()
+    }
+    Column(modifier = Modifier.fillMaxWidth().padding(10.dp)){
+        when {
+            uiResponse.isLoading -> CircularProgressIndicator()
+            uiResponse.isSuccess && uiResponse.userInfoData != null -> {
+                textfieldrow(uiResponse = uiResponse.userInfoData.name)
+                textfieldrow(uiResponse = uiResponse.userInfoData.email)
+                textfieldrow(uiResponse = uiResponse.userInfoData.approxGeolocation)
+            }
+            uiResponse.isSuccess.not() ->{
+                Row(
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text(text = "Please enter user Data")
+                }
+
+                Button(onClick = { navController.navigate("ProfileEditScreen") }, modifier = Modifier.padding(10.dp)) {
+                    Text(text = "Add User Info")
+                }
 
             }
-            when {
-                uiState.isLoading -> CircularProgressIndicator()
-                uiState.isSuccess && uiState.user != null -> {
+        }
+    }
 
-                    Row(
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth()
-                    ) {
-                        Text(text = "Name:", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        if(uiState.user?.name?.isNullOrEmpty() == true){
-                            Text(text = "Please Enter Your Name before moving forward", modifier = Modifier.background(Color.Red))
-                        }
-                        Text(text = "${uiState.user?.name}")
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier
+            .padding(10.dp)
+            .background(Color.LightGray)
+            .clip(
+                RoundedCornerShape(20.dp)
+            )
+            .fillMaxWidth()){
 
-                    }
-                    Row(
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth()
-                    ) {
-                        Text(text = "Email:", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text(text = "${uiState.user.email}")
-                    }
-                    Row(
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth()
-                    ) {
-                        Text(text = "Location:", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text(text = "${uiState.user.normallocation}")
-                    }
 
-                }
-                uiState.isSuccess.not() ->{
-                    Row(
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth()
-                    ) {
-                        Text(text = "Please enter user Data")
-
-                    }
-
-                    Button(onClick = { navController.navigate("ProfileEditScreen") }, modifier = Modifier.padding(10.dp)) {
-                        Text(text = "Add User Info")
-                    }
-
-                }
-            }
 
             Column(modifier = Modifier.padding(10.dp)){
                 Button(onClick = { navController.navigate("ProfileEditScreen") }) {
@@ -110,14 +91,28 @@ fun profileScreen(navController: NavController) {
 
             Column(modifier = Modifier.padding(10.dp)){
                 Button(onClick = {
-                    Firebase.auth.signOut()
-                    user = null
-                    navController.navigate("Auth")
+
                 }){
                     Text(text = "LogOut")
                 }
             }
         }
+    }
+}
+
+@Composable
+fun textfieldrow(uiResponse:String?){
+    Row(
+        modifier = Modifier
+            .padding(10.dp)
+            .fillMaxWidth()
+    ) {
+        Text(text = "Name:", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        if(uiResponse?.isEmpty() == true){
+            Text(text = "Please Enter Your Name before moving forward", modifier = Modifier.background(Color.Red))
+        }
+        Text(text = "${uiResponse}")
+
     }
 }
 

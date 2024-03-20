@@ -1,31 +1,34 @@
 package com.example.sportsbooking.PresentationLayer.ViewModel
 
 import android.content.Context
-import android.location.Location
+import android.content.IntentSender
+import android.location.LocationManager
 import android.net.Uri
-import android.os.Build
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.RequiresApi
-import androidx.compose.animation.core.animateDecay
+import androidx.activity.result.IntentSenderRequest
 import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.sportsbooking.Domain.location.LocationTracker
+import com.example.sportsbooking.Data.location.LocationHelper
 import com.example.sportsbooking.PresentationLayer.DataClass.FashionProductDetailData
 import com.example.sportsbooking.PresentationLayer.DataClass.ProductDataFlow
 import com.example.sportsbooking.PresentationLayer.DataClass.Response
+import com.example.sportsbooking.PresentationLayer.DataClass.UiResponse
+import com.example.sportsbooking.PresentationLayer.DataClass.UserInfoData
+import com.google.android.gms.common.api.ResolvableApiException
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.LocationSettingsRequest
+import com.google.android.gms.location.LocationSettingsResponse
+import com.google.android.gms.location.SettingsClient
 import com.google.android.gms.tasks.Task
-import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
-import com.google.firebase.firestore.toObject
 import com.google.firebase.storage.FirebaseStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +42,7 @@ import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
-class VM @Inject constructor(private val locationTracker: LocationTracker) :ViewModel(){
+class VM @Inject constructor( private val locationHelper: LocationHelper) :ViewModel(){
 
 
     val auth = Firebase.auth
@@ -53,8 +56,211 @@ class VM @Inject constructor(private val locationTracker: LocationTracker) :View
     private val _products = MutableStateFlow<List<ProductDataFlow>>(emptyList())
     val products: StateFlow<List<ProductDataFlow>> = _products
 
+    private val _uiResponse = MutableStateFlow(UiResponse())
+    val uiResponse: StateFlow<UiResponse> = _uiResponse
+
+
     private val _errorState = mutableStateOf<String?>(null)
     val errorState :State<String?> = _errorState
+
+
+    val isLocationEnabled = MutableStateFlow(false)
+
+    init {
+        updateLocationServiceStatus()
+    }
+     fun updateLocationServiceStatus() {
+        isLocationEnabled.value = locationHelper.isConnected()
+    }
+
+    fun enableLocationRequest(
+        context: Context,
+        makeRequest: (intentSenderRequest: IntentSenderRequest) -> Unit//Lambda to call when locations are off.
+    ) {
+        val locationRequest = LocationRequest.create().apply {
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        }
+        val builder = LocationSettingsRequest.Builder()
+            .addLocationRequest(locationRequest)
+
+        val client: SettingsClient = LocationServices.getSettingsClient(context)
+        val task: Task<LocationSettingsResponse> = client.checkLocationSettings(builder.build())//Checksettings with building a request
+        task.addOnSuccessListener { locationSettingsResponse ->
+            Log.d(
+                "Location",
+                "enableLocationRequest: LocationService Already Enabled"
+            )
+        }
+        task.addOnFailureListener { exception ->
+            if (exception is ResolvableApiException) {
+                // Location settings are not satisfied, but this can be fixed
+                // by showing the user a dialog.
+                try {
+                    val intentSenderRequest =
+                        IntentSenderRequest.Builder(exception.resolution).build()//Create the request prompt
+                    makeRequest(intentSenderRequest)//Make the request from UI
+                } catch (sendEx: IntentSender.SendIntentException) {
+                    // Ignore the error.
+                }
+            }
+        }
+    }
+
+    fun createOrUpdateDocument(name: String, email:String, onComplete: () -> Unit){
+        val docref =db.collection("NormalUsers").document(uid)
+        docref.get().addOnCompleteListener{ task ->
+            if(task.isSuccessful){
+                val docExists = task.result.exists()
+                if(docExists){
+                    val user = hashMapOf<String,Any>(
+                        "name" to name,
+                        "email" to email
+                    )
+                    docref.update(user)
+                        .addOnSuccessListener {
+                            _uiResponse.value =uiResponse.value.copy(
+                                isLoading = false,
+                                isSuccess = true,
+                                errorMessage = null
+                            )
+                            onComplete()
+                        }
+                        .addOnFailureListener { e->
+                            _uiResponse.value =uiResponse.value.copy(
+                                isLoading = false,
+                                isSuccess = false,
+                                errorMessage = e.localizedMessage
+                            )
+                            _errorState.value = e.localizedMessage
+                        }
+                }else {
+                    _uiResponse.value = uiResponse.value.copy(isLoading = true)
+
+                    val user = hashMapOf<String, Any>(
+                        "name" to name,
+                        "email" to email,
+                        "latitude" to 0,
+                        "longitude" to 0,
+                        "approxGeolocation" to "",
+                        "exactGeolocation" to "",
+                        "wishlist" to emptyList<String>()
+
+                    )
+
+                    db.collection("NormalUsers").document(uid).set(user)
+                        .addOnSuccessListener {
+                            _uiResponse.value = uiResponse.value.copy(
+                                isLoading = false,
+                                isSuccess = true,
+                                errorMessage = null
+                            )
+                        }
+                        .addOnFailureListener { e ->
+                            _uiResponse.value = uiResponse.value.copy(
+                                isLoading = false,
+                                isSuccess = false,
+                                errorMessage = e.localizedMessage
+                            )
+                            _errorState.value = e.localizedMessage
+                        }
+
+                }
+            }
+        }
+    }
+
+    fun updateLocation(latitude: Double,longitude:Double, approxGeolocation:String,exactGeolocation:String){
+        val docref =db.collection("NormalUsers").document(uid)
+        docref.get().addOnCompleteListener{ task ->
+            if(task.isSuccessful){
+                val docExists = task.result.exists()
+                if(docExists){
+                    val user = hashMapOf<String,Any>(
+                        "latitude" to latitude,
+                        "longitude" to longitude,
+                        "approxGeolocation" to approxGeolocation,
+                        "exactGeolocation" to exactGeolocation
+                    )
+                    docref.update(user)
+                        .addOnSuccessListener {
+                            _uiResponse.value =uiResponse.value.copy(
+                                isLoading = false,
+                                isSuccess = true,
+                                errorMessage = null
+                            )
+                        }
+                        .addOnFailureListener { e->
+                            _uiResponse.value =uiResponse.value.copy(
+                                isLoading = false,
+                                isSuccess = false,
+                                errorMessage = e.localizedMessage
+                            )
+                            _errorState.value = e.localizedMessage
+                        }
+                }
+            }
+        }
+    }
+
+    fun fetchUserData(){
+        viewModelScope.launch {
+            val uid = auth.currentUser?.uid  ?: "defaultUid"
+            val db = FirebaseFirestore.getInstance()
+            db.collection("NormalUsers").document(uid)
+                .get()
+                .addOnSuccessListener {
+                        documentSnapshot ->
+                    val userInfoData = documentSnapshot.toObject(UserInfoData::class.java)
+                    _uiResponse.value = UiResponse(
+                        isLoading = false,
+                        isSuccess = true,
+                        userInfoData = userInfoData)
+                }
+                .addOnFailureListener { exception ->
+                    _uiResponse.value =uiResponse.value.copy(
+                        isLoading = false,
+                        isSuccess = false,
+                        errorMessage = exception.localizedMessage
+                    )
+                }
+        }
+    }
+
+    fun getUserData(){
+        _uiResponse.value =uiResponse.value.copy(isLoading = true)
+
+        db.collection("NormalUsers").document(uid)
+            .get()
+            .addOnSuccessListener { documentSnapshot ->
+                if (documentSnapshot.exists()) {
+                    val data =
+                        documentSnapshot.toObject(UserInfoData::class.java)
+                    // Handle the retrieved user data here
+                    _uiResponse.value =uiResponse.value.copy(
+                        isLoading = false,
+                        isSuccess = true,
+                        errorMessage = null,
+                        userInfoData = data
+                    )
+                } else {
+                    // Document does not exist
+                    _uiResponse.value =uiResponse.value.copy(
+                        isLoading = false,
+                        isSuccess = false,
+                        errorMessage = "User data does not exist."
+                    )
+                }
+            }
+            .addOnFailureListener { exception ->
+                // Handle errors
+                _uiResponse.value =uiResponse.value.copy(
+                    isLoading = false,
+                    isSuccess = false,
+                    errorMessage = exception.localizedMessage
+                )
+                _errorState.value = exception.localizedMessage
+            }
+    }
 
     fun fetchProducts() {
         viewModelScope.launch {
@@ -163,7 +369,6 @@ class VM @Inject constructor(private val locationTracker: LocationTracker) :View
                         .addOnSuccessListener {
                             _uiState.value =uiState.value.copy(
                                 isLoading = false,
-                                location = nlocation,
                                 isSuccess = true,
                                 errorMessage = null
                             )
@@ -183,6 +388,9 @@ class VM @Inject constructor(private val locationTracker: LocationTracker) :View
             }
         }
     }
+
+
+
 
 
 
@@ -476,42 +684,7 @@ class VM @Inject constructor(private val locationTracker: LocationTracker) :View
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.P)
-    fun getUserData() {
-        _uiState.value = uiState.value.copy(isLoading = true)
 
-        db.collection("NormalUsers").document(uid)
-            .get()
-            .addOnSuccessListener { documentSnapshot ->
-                if (documentSnapshot.exists()) {
-                    val data =
-                        documentSnapshot.toObject(com.example.sportsbooking.PresentationLayer.DataClass.UserData::class.java)
-                    // Handle the retrieved user data here
-                    _uiState.value = uiState.value.copy(
-                        isLoading = false,
-                        isSuccess = true,
-                        errorMessage = null,
-                        user = data
-                    )
-                } else {
-                    // Document does not exist
-                    _uiState.value = uiState.value.copy(
-                        isLoading = false,
-                        isSuccess = false,
-                        errorMessage = "User data does not exist."
-                    )
-                }
-            }
-            .addOnFailureListener { exception ->
-                // Handle errors
-                _uiState.value = uiState.value.copy(
-                    isLoading = false,
-                    isSuccess = false,
-                    errorMessage = exception.localizedMessage
-                )
-                _errorState.value = exception.localizedMessage
-            }
-    }
 
 
 

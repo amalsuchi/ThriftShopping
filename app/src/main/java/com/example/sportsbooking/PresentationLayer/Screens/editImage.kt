@@ -48,8 +48,6 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.sportsbooking.PresentationLayer.Component.LoadingScreen
 import com.example.sportsbooking.PresentationLayer.ViewModel.VM
-import com.google.firebase.Firebase
-import com.google.firebase.storage.storage
 
 @Composable
 fun editImage(navController: NavController,id:String){

@@ -1,4 +1,4 @@
-package com.example.sportsbooking.Domain.UseCase
+package com.example.sportsbooking.PresentationLayer.Component
 
 import android.content.Context
 import android.net.Uri
