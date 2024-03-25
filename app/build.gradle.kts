@@ -120,4 +120,11 @@ dependencies {
     implementation ("io.github.aghajari:LazySwipeCards:1.0.1")
 
     implementation("io.github.hukumister:lazycardstack:0.0.1")
+
+
+
+    implementation("io.getstream:stream-chat-android-compose:6.0.8")
+    implementation("io.getstream:stream-chat-android-offline:6.0.8")
+
+
 }

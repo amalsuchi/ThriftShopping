@@ -1,6 +1,7 @@
 package com.example.sportsbooking.PresentationLayer.Screens
 
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +27,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
 
+@SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun profileEditScreen(navController: NavController){
@@ -50,10 +52,12 @@ fun profileEditScreen(navController: NavController){
 
 
         Button(onClick = {
-            vm.createOrUpdateDocument(name,email) {
-                navController.navigate("Profile") }
+            if(!name.isNullOrEmpty()){
+                vm.createOrUpdateDocument(name,email) {
+                    navController.navigate("Profile")
+                }
+            }
         }){
-
             Text(text = "Save")
         }
     }

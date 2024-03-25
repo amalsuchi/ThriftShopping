@@ -27,11 +27,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -52,7 +54,8 @@ import kotlinx.coroutines.launch
 fun sellMensFashion(navController: NavController){
 
     val viewmodel:VM = hiltViewModel()
-    val uiState = viewmodel.uiState.value
+    val uiResponse by viewmodel.uiResponse.collectAsState()
+
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -67,14 +70,17 @@ fun sellMensFashion(navController: NavController){
         }
     )
     LaunchedEffect(Unit) {
-        viewmodel.getUserData()
+        viewmodel.fetchUserData()
 
     }
     when {
-        uiState.isLoading -> LoadingScreen()
-        uiState.isSuccess && uiState.user != null -> {
-            val userName =uiState.user.name ?: "error"
-            val location = uiState.user.normallocation ?: "error"
+        uiResponse.isLoading -> LoadingScreen()
+
+        uiResponse.isSuccess && uiResponse.userInfoData?.name != null -> {
+            val userName = uiResponse.userInfoData!!.name
+            val location = uiResponse.userInfoData!!.approxGeolocation ?: "error"
+            val lat = uiResponse.userInfoData!!.latitude ?: 0.0
+            val long = uiResponse.userInfoData!!.longitude  ?: 0.0
             Column(modifier = Modifier
                 .padding(4.dp)
                 .verticalScroll(scrollState)
@@ -140,33 +146,32 @@ fun sellMensFashion(navController: NavController){
                             .fillMaxWidth(),
                         placeholder = { Text(text = "Add Details")}
                     )
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween){
-                        OutlinedTextField(value = Size , onValueChange ={
-                                sizes -> Size=sizes
-                        },
-                            modifier = Modifier
-                                .padding(4.dp),
-                            placeholder = { Text(text = "Size")}
-                        )
-                        OutlinedTextField(value = price , onValueChange ={
-                                newprice -> price=newprice
-                        },
-                            modifier = Modifier
-                                .padding(4.dp),
-                            placeholder = { Text(text = "Price")},
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
-                    }
+                    OutlinedTextField(value = Size , onValueChange ={
+                            sizes -> Size=sizes
+                    },
+                        modifier = Modifier
+                            .padding(4.dp),
+                        placeholder = { Text(text = "Size")}
+                    )
+                    OutlinedTextField(value = price , onValueChange ={
+                            newprice -> price=newprice
+                    },
+                        modifier = Modifier
+                            .padding(4.dp),
+                        placeholder = { Text(text = "Price")},
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
 
                     Button(onClick = {
                         coroutineScope.launch {
-
-                            viewmodel.uploadFashionItemsdetail("Men",userName,itemName,location,Size,details,price.toInt(),imageUriList.value)
+                            if (userName != null) {
+                                viewmodel.uploadFashionItemsdetail("Men",long,lat,userName,itemName,location,Size,details,price.toInt(),imageUriList.value)
+                                navController.navigate("Add")
+                            }
                         }
-                    }
-                    )
+                    })
                     {
-                        if (uiState.isLoading) {
+                        if (uiResponse.isLoading) {
                             CircularProgressIndicator()
                         } else {
                             Text(text = "Save")
@@ -176,14 +181,13 @@ fun sellMensFashion(navController: NavController){
 
             }
         }
-        uiState.isSuccess.not() ->{
+        uiResponse.isSuccess.not() ->{
             Row(
                 modifier = Modifier
                     .padding(10.dp)
                     .fillMaxWidth()
             ) {
                 Text(text = "Error loading data")
-
             }
 
         }

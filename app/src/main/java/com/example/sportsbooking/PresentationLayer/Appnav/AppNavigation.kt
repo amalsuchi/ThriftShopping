@@ -7,8 +7,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.sportsbooking.PresentationLayer.Screens.Permission
-
-import com.example.sportsbooking.PresentationLayer.Screens.authScreen
 import com.example.sportsbooking.PresentationLayer.Screens.mainPageScreen
 
 

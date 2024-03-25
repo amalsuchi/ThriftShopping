@@ -37,7 +37,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.sportsbooking.PresentationLayer.DataClass.BottomNav
-import com.example.sportsbooking.PresentationLayer.Screens.HomeScreen.HomeScreen
+import com.example.sportsbooking.PresentationLayer.Screens.Chat.chatPage
 import com.example.sportsbooking.PresentationLayer.Screens.HomeScreen.newHomeScreen
 import com.example.sportsbooking.PresentationLayer.Screens.SellClothesDetail.sellMensFashion
 import com.example.sportsbooking.PresentationLayer.Screens.SellScreen.sellart
@@ -50,6 +50,7 @@ import com.example.sportsbooking.PresentationLayer.Screens.SellScreen.sellsports
 import com.example.sportsbooking.PresentationLayer.Screens.SellScreen.selltoys
 import com.example.sportsbooking.PresentationLayer.Screens.UserAdd.YourAddDetails
 import com.example.sportsbooking.PresentationLayer.Screens.UserAdd.YourAdds
+import com.example.sportsbooking.PresentationLayer.Screens.WishlistScreen.wishlistScreen
 
 
 @RequiresApi(Build.VERSION_CODES.P)
@@ -192,6 +193,12 @@ fun mainPageScreen(navController: NavController){
                     }
                     composable("SellMensFashion"){
                         sellMensFashion(navController = navController)
+                    }
+                    composable("Wishlist"){
+                        wishlistScreen(navController = navController)
+                    }
+                    composable("Chat"){
+                        chatPage(navController = navController)
                     }
                     composable("UserAddDetail/{id}"){ backStackEntry ->
                         backStackEntry.arguments?.getString("id")

@@ -26,7 +26,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 
 import com.example.sportsbooking.PresentationLayer.Screens.Permission
-import com.example.sportsbooking.PresentationLayer.Screens.authScreen
 import com.example.sportsbooking.PresentationLayer.Screens.mainPageScreen
 import com.example.sportsbooking.PresentationLayer.signIn.GoogleAuthUiClient
 import com.example.sportsbooking.PresentationLayer.signIn.SignInScreen
@@ -37,10 +36,17 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.android.gms.auth.api.identity.Identity
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.HiltAndroidApp
+import io.getstream.chat.android.client.ChatClient
+import io.getstream.chat.android.client.logger.ChatLogLevel
+import io.getstream.chat.android.offline.plugin.factory.StreamOfflinePluginFactory
+import io.getstream.chat.android.state.plugin.config.StatePluginConfig
+import io.getstream.chat.android.state.plugin.factory.StreamStatePluginFactory
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+
 
     private val googleAuthUiClient by lazy {
         GoogleAuthUiClient(
@@ -51,6 +57,8 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.P)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
         setContent {
             SportsBookingTheme {
                 // A surface container using the 'background' color from the theme

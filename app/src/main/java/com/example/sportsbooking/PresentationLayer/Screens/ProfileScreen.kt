@@ -14,6 +14,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,7 +46,7 @@ fun profileScreen(navController: NavController) {
     val vm: VM = hiltViewModel()
 
     val coroutineScope = rememberCoroutineScope()
-    val uiResponse = vm.uiResponse.value
+    val uiResponse by vm.uiResponse.collectAsState()
 
     val context = LocalContext.current
     val googleAuthUiClient by lazy {
@@ -56,7 +57,7 @@ fun profileScreen(navController: NavController) {
     }
 
     LaunchedEffect(Unit) {
-        vm.getUserData()
+        vm.fetchUserData()
 
     }
     Column(modifier = Modifier
@@ -64,10 +65,10 @@ fun profileScreen(navController: NavController) {
         .padding(10.dp)){
         when {
             uiResponse.isLoading -> CircularProgressIndicator()
-            uiResponse.isSuccess && uiResponse.userInfoData != null -> {
-                textfieldrow(uiResponse = uiResponse.userInfoData.name)
-                textfieldrow(uiResponse = uiResponse.userInfoData.email)
-                textfieldrow(uiResponse = uiResponse.userInfoData.approxGeolocation)
+            uiResponse.isSuccess -> {
+                textfieldrow(uiResponse = uiResponse.userInfoData?.name)
+                textfieldrow(uiResponse = uiResponse.userInfoData?.email)
+                textfieldrow(uiResponse = uiResponse.userInfoData?.approxGeolocation)
             }
             uiResponse.isSuccess.not() ->{
                 Row(

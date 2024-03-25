@@ -33,6 +33,7 @@ import com.google.firebase.storage.FirebaseStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
@@ -50,6 +51,21 @@ class VM @Inject constructor( private val locationHelper: LocationHelper) :ViewM
     val mail = auth.currentUser?.email  ?: "defaultEmail"
     val db = Firebase.firestore
 
+    private val _jwtToken = MutableStateFlow<String?>(null)
+    val jwtToken = _jwtToken.asStateFlow()
+
+    fun getJwtToken(){
+        viewModelScope.launch {
+            val currentUser = auth.currentUser
+            currentUser?.getIdToken(true)?.addOnCompleteListener { task ->
+                if(task.isSuccessful){
+                    val token = task.result?.token
+                    _jwtToken.value =token
+                }
+            }
+        }
+    }
+
     private val _uiState = mutableStateOf(Response())
     val uiState : State<Response> = _uiState
 
@@ -58,7 +74,6 @@ class VM @Inject constructor( private val locationHelper: LocationHelper) :ViewM
 
     private val _uiResponse = MutableStateFlow(UiResponse())
     val uiResponse: StateFlow<UiResponse> = _uiResponse
-
 
     private val _errorState = mutableStateOf<String?>(null)
     val errorState :State<String?> = _errorState
@@ -226,40 +241,22 @@ class VM @Inject constructor( private val locationHelper: LocationHelper) :ViewM
         }
     }
 
-    fun getUserData(){
-        _uiResponse.value =uiResponse.value.copy(isLoading = true)
+    fun fetchWishlist(){
+        viewModelScope.launch {
+            val uid = auth.currentUser?.uid ?: "defaultUid"
+            val db = FirebaseFirestore.getInstance()
+            val userdoc = db.collection("NormalUsers").document(uid).get().await()
+            val wishlistedProducts = userdoc.get("wishlist") as List<String>
 
-        db.collection("NormalUsers").document(uid)
-            .get()
-            .addOnSuccessListener { documentSnapshot ->
-                if (documentSnapshot.exists()) {
-                    val data =
-                        documentSnapshot.toObject(UserInfoData::class.java)
-                    // Handle the retrieved user data here
-                    _uiResponse.value =uiResponse.value.copy(
-                        isLoading = false,
-                        isSuccess = true,
-                        errorMessage = null,
-                        userInfoData = data
-                    )
-                } else {
-                    // Document does not exist
-                    _uiResponse.value =uiResponse.value.copy(
-                        isLoading = false,
-                        isSuccess = false,
-                        errorMessage = "User data does not exist."
-                    )
-                }
+            val productList = mutableListOf<ProductDataFlow>()
+            for(productId in wishlistedProducts){
+                val productDocRef = db.collection("Products").document(productId)
+                val productDoc = productDocRef.get().await()
+                val product = productDoc.toObject(ProductDataFlow::class.java)
+                product?.let { productList.add(it) }
             }
-            .addOnFailureListener { exception ->
-                // Handle errors
-                _uiResponse.value =uiResponse.value.copy(
-                    isLoading = false,
-                    isSuccess = false,
-                    errorMessage = exception.localizedMessage
-                )
-                _errorState.value = exception.localizedMessage
-            }
+            _products.value = productList
+        }
     }
 
     fun fetchProducts() {
@@ -269,9 +266,9 @@ class VM @Inject constructor( private val locationHelper: LocationHelper) :ViewM
             db.collection("NormalUsers").document(uid)
                 .get()
                 .addOnSuccessListener { documentSnapshot ->
-                    val location = documentSnapshot.getString("normallocation")
+                    val location = documentSnapshot.getString("Location")
                     if (location != null) {
-                        val wishlistedProducts = documentSnapshot.get("Wishlist") as List<String>
+                        val wishlistedProducts = documentSnapshot.get("wishlist") as List<String>
 
                         fetchProductsBasedOnLocation(location,wishlistedProducts)
 
@@ -314,7 +311,7 @@ class VM @Inject constructor( private val locationHelper: LocationHelper) :ViewM
         val firestore = FirebaseFirestore.getInstance()
         val documentRef = firestore.collection("NormalUsers").document(uid)
 
-        documentRef.update("Wishlist",FieldValue.arrayUnion(itemToAdd))
+        documentRef.update("wishlist",FieldValue.arrayUnion(itemToAdd))
             .addOnSuccessListener {
                 Log.d("wishlist","sucess")
             }.addOnFailureListener {
@@ -423,6 +420,8 @@ class VM @Inject constructor( private val locationHelper: LocationHelper) :ViewM
 
     suspend fun uploadFashionItemsdetail(
         For:String,
+        latitude: Double,
+        longitude: Double,
         username:String,
         itemname:String,
         location:String,
@@ -430,7 +429,7 @@ class VM @Inject constructor( private val locationHelper: LocationHelper) :ViewM
         Detail:String,
         Price:Int,
         imageUri:List<Uri>){
-        _uiState.value =uiState.value.copy(isLoading = true)
+        _uiResponse.value =uiResponse.value.copy(isLoading = true)
 
         var urlToFirestore = mutableListOf<String>()
         val storageRef = FirebaseStorage.getInstance().reference
@@ -458,6 +457,8 @@ class VM @Inject constructor( private val locationHelper: LocationHelper) :ViewM
             "UserName" to username,
             "Email" to mail,
             "Location" to location,
+            "lat" to latitude,
+            "long" to longitude,
             "imageUri" to urlToFirestore,
             "TimeStamp" to TimeStamp,
             "id" to uniqueImageId
@@ -465,13 +466,13 @@ class VM @Inject constructor( private val locationHelper: LocationHelper) :ViewM
         )
         try {
             db.collection("Products").document(uniqueImageId).set(Productdetails).await()
-            _uiState.value =uiState.value.copy(
+            _uiResponse.value =uiResponse.value.copy(
                 isLoading = false,
                 isSuccess = true,
                 errorMessage = null
             )
         } catch (e: Exception) {
-            _uiState.value = uiState.value.copy(
+            _uiResponse.value =uiResponse.value.copy(
                 isLoading = false,
                 isSuccess = false,
                 errorMessage = e.localizedMessage
