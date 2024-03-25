@@ -129,7 +129,8 @@ class VM @Inject constructor( private val locationHelper: LocationHelper) :ViewM
                 if(docExists){
                     val user = hashMapOf<String,Any>(
                         "name" to name,
-                        "email" to email
+                        "email" to email,
+                        "uid" to uid
                     )
                     docref.update(user)
                         .addOnSuccessListener {
@@ -154,6 +155,7 @@ class VM @Inject constructor( private val locationHelper: LocationHelper) :ViewM
                     val user = hashMapOf<String, Any>(
                         "name" to name,
                         "email" to email,
+                        "uid" to uid.toString(),
                         "latitude" to 0,
                         "longitude" to 0,
                         "approxGeolocation" to "",
